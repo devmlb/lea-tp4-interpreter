@@ -1,0 +1,136 @@
+package lea;
+
+import java.util.*;
+import java_cup.runtime.Symbol;
+
+import lea.Node.*;
+
+parser code {:
+
+	private Reporter reporter;
+	private Reporter.Span errorSpan = Reporter.Span.EMPTY;
+
+	@SuppressWarnings("deprecation")
+	public Parser(Lexer lexer, Reporter reporter) {
+		super(lexer);
+		this.reporter = reporter;
+	}
+  
+	public Program parseProgram() {
+		try {
+			if(parse().value instanceof Program program)
+				return program;
+		} catch (Exception e) {
+			reporter.error(Reporter.Phase.PARSER, Reporter.Span.EMPTY, "Exception: " + e.getClass().getSimpleName());
+		}
+		return new Program(new ErrorNode());
+	}
+
+	@Override
+	public void syntax_error(Symbol currentSymbol) {
+		if(currentSymbol != null) 
+			errorSpan = errorSpan.union(reporter.span(currentSymbol.value));
+	}
+
+	private ErrorNode error(String message) { 
+		reporter.error(Reporter.Phase.PARSER, errorSpan, message);
+		errorSpan = Reporter.Span.EMPTY;
+		return new ErrorNode(); 
+	}
+
+	private <T extends Node> T mark(T n, Object anchorStart, Object anchorEnd) { 
+		reporter.attach(n, anchorStart, anchorEnd); 
+		return n; 
+	}
+    
+:}
+
+terminal					ALGORITHME, DEBUT, FIN;
+terminal					SI, ALORS, SINON, ECRIRE;
+terminal					AFFECTATION, PT_VIRG, PAR_G, PAR_D;
+terminal					PLUS, MOINS, MULTIPLIE, ET, OU, EGAL, INFERIEUR;
+terminal		Value		LITERAL;
+terminal		Identifier	ID;
+
+non terminal	Program					algo;
+non terminal	Instruction				instruction, commande, si;
+non terminal	Sequence				sequence;
+non terminal	Expression				expression, catch_expr, somme, produit, oppose, terme, disjunction, comparison, conjunction;
+
+algo ::=
+		ALGORITHME 
+		DEBUT sequence:s FIN							{: RESULT = new Program(s); :}
+	|	error FIN										{: RESULT = new Program(error("Erreur dans le programme")); :}
+;
+
+sequence ::=
+		/* Empty */										{: RESULT = new Sequence(new ArrayList<>()); :}
+	|	sequence:s instruction:i						{: RESULT = s; RESULT.commands().add(i); :}
+	|	sequence:s PT_VIRG								{: RESULT = s; :}
+;
+
+instruction ::=	
+		si:s		 									{: RESULT = s; :}
+	|	ID:id AFFECTATION expression:e					{: RESULT = mark(new Assignment(id,e), id, e); :}
+	|	ECRIRE:deb PAR_G expression:e PAR_D:fin			{: RESULT = mark(new Write(e), deb, fin); :}
+	|	error PT_VIRG									{: RESULT = error("Erreur dans la commande"); :}
+;
+
+si ::=
+		SI:deb catch_expr:cond ALORS 
+			sequence:iftrue
+		SINON 
+			sequence:iffalse 
+		FIN SI:fin										{: RESULT = mark(new If(cond, iftrue, iffalse), deb, fin); :}
+ 	|	error FIN SI									{: RESULT = error("Erreur dans la conditionnelle"); :}
+;
+
+ /* Expressions */
+
+catch_expr ::=
+		expression:e		 							{: RESULT = e; :}
+	|	error											{: RESULT = error("Erreur dans l'expression"); :}
+	|													{: RESULT = error("Expression manquante"); :}
+;
+
+expression ::= 	
+		disjunction:d									{: RESULT = d; :}
+;
+
+disjunction ::=
+		conjunction:d									{: RESULT = d; :}
+	|	disjunction:l OU conjunction:r					{: RESULT = mark(new Or(l, r), l, r); :}
+;
+
+conjunction ::=
+		comparison:c									{: RESULT = c; :}
+	|	conjunction:l ET comparison:r					{: RESULT = mark(new And(l, r), l, r); :}
+;
+
+comparison ::=
+		somme:s											{: RESULT = s; :}
+	|	somme:l INFERIEUR somme:r						{: RESULT = mark(new Lower(l, r), l, r); :}
+	|	somme:l EGAL somme:r							{: RESULT = mark(new Equal(l, r), l, r); :}
+;
+
+somme ::=
+		produit:p										{: RESULT = p; :}
+	|	somme:l	PLUS	produit:r						{: RESULT = mark(new Sum(l, r), l, r); :}
+	|	somme:l	MOINS	produit:r						{: RESULT = mark(new Sum(l, r), l, r); :}
+;
+
+produit ::=
+		oppose:o										{: RESULT = o; :}
+	|	produit:l	MULTIPLIE	oppose:r				{: RESULT = mark(new Product(l, r), l, r); :}
+;
+
+oppose ::=	
+		terme:i											{: RESULT = i; :}
+	|	MOINS:deb oppose:o					        	{: RESULT = mark(new Inverse(o), deb, o); :}
+;
+
+terme ::=
+		LITERAL:l										{: RESULT = l; :}
+	|	ID:id											{: RESULT = id; :}
+    |	PAR_G	expression:e	PAR_D					{: RESULT = e; :}
+;
