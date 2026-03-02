@@ -31,10 +31,10 @@ public final class Exo1Test {
 	@Test
 	void recovery_in_sequence() {
 		new LeaAsserts("""
-				x <- 1 + ; 
+				x <- 1 + ;
 				écrire(0);
 				""")
-		.assertHasErrorContaining(Phase.PARSER, "");
+		.assertHasErrorContaining(Phase.PARSER, "Erreur dans la commande");
 	}
 
 	@Test
@@ -46,7 +46,7 @@ public final class Exo1Test {
 				    écrire(0);
 				fin si
 				""")
-		.assertHasErrorContaining(Phase.PARSER, "");
+		.assertHasErrorContaining(Phase.PARSER, "Erreur dans l'expression");
 	}
 
 	@Test
@@ -57,7 +57,7 @@ public final class Exo1Test {
 				fin si
 				écrire(1);
 				""")
-		.assertHasErrorContaining(Phase.PARSER, "");
+		.assertHasErrorContaining(Phase.PARSER, "Erreur dans la conditionnelle");
 	}
 	
 }

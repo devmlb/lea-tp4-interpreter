@@ -76,7 +76,7 @@ public final class Exo2Test {
 		new LeaAsserts("""
 				n <- 3;
 				pour i de 1 à n faire
-				    n <- 100; 
+				    n <- 100;
 				    écrire(i);
 				fin pour
 				""")

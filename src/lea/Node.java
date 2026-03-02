@@ -1,6 +1,6 @@
 package lea;
 
-import java.util.List;
+import java.util.*;
 
 public sealed interface Node {
 

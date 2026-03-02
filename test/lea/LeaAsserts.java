@@ -2,6 +2,8 @@ package lea;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -27,6 +29,8 @@ public class LeaAsserts {
 		} catch (Exception e) {
 			fail(e);
 		}
+		PrintStream originalOut = System.out;
+	    System.setOut(new PrintStream(OutputStream.nullOutputStream()));
 		try(Reader reader = new StringReader(source)) {
 			var lexer = new Lexer(reader, reporter);
 			var parser = new Parser(lexer,reporter);
@@ -35,7 +39,9 @@ public class LeaAsserts {
 			interpreter.execute(program);
 		} catch (Exception e) {
 			fail(e);
-		}
+		} finally {
+	        System.setOut(originalOut);
+	    }
 	}
 
 	private List<String> getErrors(Phase phase, String fragment) {
