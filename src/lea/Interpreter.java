@@ -2,6 +2,7 @@ package lea;
 
 import java.util.*;
 
+import java_cup.parse_action;
 import lea.Node.*;
 import lea.Reporter.Phase;
 
@@ -31,6 +32,8 @@ public class Interpreter {
 		case Assignment a	-> variables.put(a.id(), eval(a.value()));
 		case Write w		-> interpret(w);
 		case If i			-> interpret(i);
+		case While wh		-> interpret(wh);
+		case For f			-> interpret(f);
 		case ErrorNode e	-> throw error(e, "Le programme contient une erreur de syntaxe");
 		}
 	}
@@ -57,15 +60,29 @@ public class Interpreter {
 		}
 	}
 
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	private void interpret(While wh) throws PanicException {
+		while (evalAsBool(wh.cond())) {
+			interpret(wh.body());
+		}
+	}
+
+	private void interpret(For f) throws PanicException {
+		variables.put(f.i(), eval(f.d()));
+
+		int s = 1;
+		if (evalAsInt(f.d()) > evalAsInt(f.f())) s = -1;
+		if (f.step().isPresent()) s = evalAsInt(f.step().get());
+
+
+		if (s == 0) return;
+		
+		int endValue = evalAsInt(f.f());
+		
+		for (int current = evalAsInt(variables.get(f.i())); s > 0 ? current <= endValue : current >= endValue; current += s) {
+			variables.put(f.i(), new Int(current));
+			interpret(f.body());
+		}
+	}
 	
 	/**
 	 * 
@@ -107,12 +124,7 @@ public class Interpreter {
 		case Int i -> i.value();
 		default -> throw error(expression, "Type (entier)");
 		};
-	}
-
-	
-	
-	
-	
+	}	
 	
 	/* ***************
 	 * 	Gestion des erreurs d'exécution

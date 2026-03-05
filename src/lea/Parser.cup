@@ -56,13 +56,13 @@ parser code {:
     
 :}
 
-terminal					SI, ALORS, SINON, FIN, ECRIRE;
+terminal					SI, ALORS, SINON, FIN, ECRIRE, TANT, QUE, FAIRE, POUR, DE, A, PAS;
 terminal					AFFECTATION, PT_VIRG, PAR_G, PAR_D;
 terminal					PLUS, MOINS, MULTIPLIE, ET, OU, EGAL, INFERIEUR;
 terminal		Value		LITERAL;
 terminal		Identifier	ID;
 
-non terminal	Instruction	input, instruction, commande, conditionnelle;
+non terminal	Instruction	input, instruction, commande, conditionnelle, tantque, pour;
 non terminal	Sequence	sequence;
 non terminal	Expression	expression, catch_expr, somme, produit, oppose, terme, disjunction, comparison, conjunction;
 
@@ -81,6 +81,8 @@ sequence ::=
 instruction ::=	
 		conditionnelle:c								{: RESULT = c; :}
 	|	commande:c PT_VIRG								{: RESULT = c; :}
+	| 	tantque:tq										{: RESULT = tq; :}
+	| 	pour:p											{: RESULT = p; :}
 	|	error PT_VIRG									{: RESULT = error("Erreur dans la commande"); :}
 ;
 
@@ -95,9 +97,26 @@ conditionnelle ::=
 		SINON 
 			sequence:iffalse 
 		FIN SI:fin										{: RESULT = mark(new If(cond, iftrue, iffalse), deb, fin); :}
-	|	SI:deb catch_expr:cond ALORS 
+	|	SI catch_expr:cond ALORS 
 			sequence:iftrue
-		error FIN SI:fin								{: RESULT = error("Erreur dans la conditionnelle"); :}
+		error FIN SI									{: RESULT = error("Erreur dans la conditionnelle"); :}
+;
+
+tantque ::=
+		TANT:deb QUE catch_expr:cond FAIRE
+			sequence:body
+		FIN TANT QUE:fin 									{: RESULT = mark(new While(cond, body), deb, fin); :}
+	| 	error FIN TANT QUE 								{: RESULT = error("Erreur dans le tant que"); :}
+;
+
+pour ::=
+		POUR:deb ID:i DE expression:d A expression:f PAS expression:p FAIRE
+			sequence:body
+		FIN POUR:fin 										{: RESULT = mark(new For(i, d, f, Optional.of(p), body), deb, fin); :}
+	| 	POUR:deb ID:i DE expression:d A expression:f FAIRE
+			sequence:body
+		FIN POUR:fin 										{: RESULT = mark(new For(i, d, f, Optional.empty(), body), deb, fin); :}
+	| 	error FIN POUR 										{: RESULT = error("Erreur dans le tant que"); :}
 ;
 
  /* Expressions */
