@@ -95,6 +95,9 @@ conditionnelle ::=
 		SINON 
 			sequence:iffalse 
 		FIN SI:fin										{: RESULT = mark(new If(cond, iftrue, iffalse), deb, fin); :}
+	|	SI:deb catch_expr:cond ALORS 
+			sequence:iftrue
+		error FIN SI:fin								{: RESULT = error("Erreur dans la conditionnelle"); :}
 ;
 
  /* Expressions */
